@@ -74,7 +74,7 @@ class Amity(object):
 
         self.all_people[person_name] = person
         habitable_rooms = []  # rooms person can be in
-        for room_name, room in self.rooms.iteritems():
+        for room_name, room in self.rooms.items():
             if self.can_be_in_room(person, room):
                 habitable_rooms.append(room)
 
@@ -84,7 +84,7 @@ class Amity(object):
             return person
         except IndexError as error:
             message = ' (No room to add %s to.)' % (type(person).__name__)
-            raise type(error)(error.message + message)
+            raise type(error)  # (error.message + message)
 
     def can_be_in_room(self, person, room):
         if person in room.people_in_room:
