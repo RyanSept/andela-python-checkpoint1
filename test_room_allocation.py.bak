@@ -43,7 +43,7 @@ class Test_Room_Allocation(TestCase):
         room_to_check = 'Hogwarts'
         self.amity.create_room('Hogwarts~l', 'Camelot~o',
                                'Narnia~l', 'Valhalla~o')
-        amity_room_names = list(self.amity.rooms.keys())
+        amity_room_names = self.amity.rooms.keys()
 
         self.assertIn(room_to_check, amity_room_names)
 
@@ -52,7 +52,7 @@ class Test_Room_Allocation(TestCase):
         self.amity.create_room(room_name + '~l')
         self.amity.create_room(room_name + '~l')
 
-        amity_room_names = list(self.amity.rooms.keys())
+        amity_room_names = self.amity.rooms.keys()
         occurence_count = amity_room_names.count(room_name)
 
         self.assertLess(occurence_count, 2)
