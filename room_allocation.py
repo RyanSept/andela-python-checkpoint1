@@ -1,10 +1,10 @@
 import random
+from models import Person, Room, session
 
 
 class Amity(object):
     def __init__(self):
-        self.rooms = {}  # {'room_name':<obj: Room>}
-        self.all_people = {}  # {'person_name':<obj: Person>}
+        self.db = session
 
     def create_room(self, *args):
         ''' Creates a room in Amity
@@ -41,19 +41,14 @@ class Amity(object):
                 continue
             # input validation ends here
 
-            if room_type == 'l':
-                room = LivingSpace(room_name)
-            else:
-                room = Office(room_name)
+            room = Room(name=room_name, room_type=room_type)
+            self.add_to_db(room)
 
-            self.rooms[room_name] = room  # add room object to amity
             counter += 1
 
     def room_exists(self, room_name):
-        if room_name in self.rooms:
-            return True
-        else:
-            return False
+        exists = self.db.query(Room).filter(Room.name == room_name).all()
+        return bool(exists)
 
     def add_person(self, person_name, typ, wants_accomodation=False):
         '''
@@ -67,14 +62,16 @@ class Amity(object):
             raise TypeError
 
         if typ == 'fellow':
-            person = Fellow(person_name)
-            person.wants_accomodation = wants_accomodation
+            person = Person(name=person_name, person_type='f',
+                            wants_accomodation=wants_accomodation)
         elif typ == 'staff':
-            person = Staff(person_name)
+            person = Person(name=person_name, person_type='s',
+                            wants_accomodation=wants_accomodation)
 
-        self.all_people[person_name] = person
-        habitable_rooms = []  # rooms person can be in
-        for room_name, room in self.rooms.items():
+        self.add_to_db(person)
+        habitable_rooms = []
+        rooms = self.db.query(Room).all()
+        for room in rooms:
             if self.can_be_in_room(person, room):
                 habitable_rooms.append(room)
 
@@ -89,36 +86,37 @@ class Amity(object):
     def can_be_in_room(self, person, room):
         if person in room.people_in_room:
             return False
-        if type(person) is Fellow:
-            if type(room) is Office:
+        if person.person_type == 'f':
+            if room.room_type == 'o':
                 return True
-            if type(room) is LivingSpace and person.wants_accomodation:
+            if room == 'l' and person.wants_accomodation:
                 return True
-        elif type(person) is Staff:
-            if type(room) is LivingSpace:
+        elif person.person_type == 's':
+            if room.room_type == 'l':
                 return False
             return True
         return False
 
     def get_room_by_name(self, room_name):
         if self.room_exists(room_name):
-            return self.rooms[room_name]
+            room = self.db.query(Room).filter(Room.name == room_name).first()
+            return room
+
+    def get_person_by_name(self, person_name):
+        person = self.db.query(Person).filter(
+            Person.name == person_name).first()
+        return person
+
+    def add_to_db(self, *args):
+        self.db.add_all(args)
+        self.db.commit()
 
 
-class Room(object):
-    def __init__(self, name):
-        '''
-        Creates room with given name
-        '''
-        self.name = name
-        self.people_in_room = []
-
-
-class Office(Room):
+class Office(object):
     max_capacity = 6
 
 
-class LivingSpace(Room):
+class LivingSpace(object):
     max_capacity = 4
 
 

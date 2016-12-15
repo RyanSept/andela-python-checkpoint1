@@ -9,18 +9,6 @@ class Test_Room_Allocation(TestCase):
     def setUp(self):
         self.amity = Amity()
 
-    def test_livingspace_subclass_room(self):
-        self.assertTrue(issubclass(LivingSpace, Room))
-
-    def test_office_subclass_room(self):
-        self.assertTrue(issubclass(Office, Room))
-
-    def test_fellow_subclass_person(self):
-        self.assertTrue(issubclass(Fellow, Person))
-
-    def test_staff_sublcass_person(self):
-        self.assertTrue(issubclass(Staff, Person))
-
     def test_office_max_6(self):
         office = Office('Camelot~o')
         self.assertTrue(office.max_capacity == 6)
@@ -29,7 +17,7 @@ class Test_Room_Allocation(TestCase):
         livingspace = LivingSpace('Hogwarts~l')
         self.assertTrue(livingspace.max_capacity == 4)
 
-    def test_sets_room_name(self):
+    def test_can_create_room(self):
         self.amity.create_room('Hogwarts~l')
         room = self.amity.get_room_by_name('Hogwarts')
         self.assertTrue(room.name)
@@ -39,21 +27,13 @@ class Test_Room_Allocation(TestCase):
         person = self.amity.add_person('John', 'fellow')
         self.assertTrue(person.name)
 
-    def test_can_create_room(self):
-        room_to_check = 'Hogwarts'
-        self.amity.create_room('Hogwarts~l', 'Camelot~o',
-                               'Narnia~l', 'Valhalla~o')
-        amity_room_names = list(self.amity.rooms.keys())
-
-        self.assertIn(room_to_check, amity_room_names)
-
     def test_cannot_create_duplicate_room(self):
         room_name = 'Hogwarts'
         self.amity.create_room(room_name + '~l')
         self.amity.create_room(room_name + '~l')
 
-        amity_room_names = list(self.amity.rooms.keys())
-        occurence_count = amity_room_names.count(room_name)
+        amity_rooms = self.amity.db.query(Room)
+        occurence_count = len(amity_rooms.filter(Room.name == room_name).all())
 
         self.assertLess(occurence_count, 2)
 
@@ -65,7 +45,8 @@ class Test_Room_Allocation(TestCase):
         person_name = 'Ryan'
         self.amity.create_room('Hogwarts~l')
         self.amity.add_person(person_name, 'fellow', wants_accomodation=True)
-        self.assertIn(person_name, self.amity.all_people)
+        person = self.amity.get_person_by_name(person_name)
+        self.assertTrue(person)
 
     def test_adds_fellow_to_livingspace(self):
         person_name = 'Jude'
