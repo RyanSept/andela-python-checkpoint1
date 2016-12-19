@@ -1,5 +1,6 @@
 import unittest
 from unittest import TestCase
+from unittest.mock import mock_open, patch
 from room_allocation import Amity, Room, LivingSpace, Office, Person, Fellow, Staff
 
 
@@ -8,26 +9,6 @@ class Test_Room_Allocation(TestCase):
 
     def setUp(self):
         self.amity = Amity()
-
-    def test_livingspace_subclass_room(self):
-        self.assertTrue(issubclass(LivingSpace, Room))
-
-    def test_office_subclass_room(self):
-        self.assertTrue(issubclass(Office, Room))
-
-    def test_fellow_subclass_person(self):
-        self.assertTrue(issubclass(Fellow, Person))
-
-    def test_staff_sublcass_person(self):
-        self.assertTrue(issubclass(Staff, Person))
-
-    def test_office_max_6(self):
-        office = Office('Camelot~o')
-        self.assertTrue(office.max_capacity == 6)
-
-    def test_livingspace_max_4(self):
-        livingspace = LivingSpace('Hogwarts~l')
-        self.assertTrue(livingspace.max_capacity == 4)
 
     def test_sets_room_name(self):
         self.amity.create_room('Hogwarts~l')
@@ -64,17 +45,17 @@ class Test_Room_Allocation(TestCase):
     def test_can_add_person_to_system(self):
         person_name = 'Ryan'
         self.amity.create_room('Hogwarts~l')
-        self.amity.add_person(person_name, 'fellow', wants_accomodation=True)
+        self.amity.add_person(person_name, 'fellow', wants_accommodation=True)
         self.assertIn(person_name, self.amity.all_people)
 
     def test_adds_fellow_to_livingspace(self):
         person_name = 'Jude'
         self.amity.create_room('Hogwarts~l')
         person = self.amity.add_person(
-            person_name, 'fellow', wants_accomodation=True)
+            person_name, 'fellow', wants_accommodation=True)
         room = self.amity.get_room_by_name('Hogwarts')
 
-        self.assertIn(person, room.people_in_room)
+        self.assertIn(person, room.people_in_room.values())
 
     def test_add_person_when_no_room_exists(self):
         '''Test add_person when no room they can stay in or no rooms at all'''
@@ -96,11 +77,75 @@ class Test_Room_Allocation(TestCase):
 
         self.assertNotIn(person, room.people_in_room)
 
-    def test_cannot_add_more_than_6_to_office(self):
-        pass
+    def test_cannot_add_more_than_6_people_to_office(self):
+        people = ['Paul', 'Ryan', 'Barney',
+                  'Mark', 'Angie', 'David', 'Stephen']
+        self.amity.create_room('Narnia~o', 'Hogwarts~l', 'Camelot~o')
+        # add 7 people
+        for person in people:
+            self.amity.add_person(person, 'staff')
+            self.amity.reallocate_person(person, 'Camelot')
 
-    def test_cannot_add_more_than_4_to_livingspace(self):
-        pass
+        camelot = self.amity.get_room_by_name('Camelot')
+        self.assertLess(len(camelot.people_in_room), 7)
+
+    def test_cannot_add_more_than_4_people_to_livingspace(self):
+        people = ['Paul', 'Ryan', 'Barney', 'Mark', 'Angie']
+        self.amity.create_room('Narnia~l', 'Hogwarts~l', 'Camelot~o')
+        # add 7 people
+        for person in people:
+            self.amity.add_person(person, 'fellow', wants_accommodation=True)
+            self.amity.reallocate_person(person, 'Hogwarts')
+        hogwarts = self.amity.get_room_by_name('Hogwarts')
+        self.assertLess(len(hogwarts.people_in_room), 5)
+
+    def test_cannot_reallocate_to_wrong_room(self):
+        self.amity.create_room("Camelot~o", "Hogwarts~l")
+        self.amity.add_person("Lancelot", 'staff')
+
+        status = self.amity.reallocate_person("Lancelot", 'Hogwarts')
+        self.assertEqual(status, "Person cannot be in room.")
+
+        self.amity.add_person("Arthur", 'fellow')  # doesn't want accommodation
+        status2 = self.amity.reallocate_person("Arthur", 'Hogwarts')
+        self.assertEqual(status2, "Person cannot be in room.")
+
+    def test_cannot_reallocate_non_existent_person(self):
+        self.amity.create_room('Hogwarts~l')
+        status = self.amity.reallocate_person('Dumbledore', 'Hogwarts')
+        self.assertEqual(status, "Person does not exist.")
+
+    def test_cannot_reallocate_to_non_existent_room(self):
+        self.amity.create_room("Camelot~o", "Hogwarts~l")
+        self.amity.add_person("Potter", "fellow")
+        status = self.amity.reallocate_person("Potter", "Non_Existent_Room")
+        self.assertEqual(status, "Room does not exist.")
+
+    def test_print_room_nonexistent_room_name(self):
+        status = self.amity.print_room("NonExistentRoom")
+        self.assertEqual(status, "Room does not exist.")
+
+    def test_print_allocations_no_rooms_exist(self):
+        status = self.amity.print_allocations()
+        self.assertEqual(status, "No rooms exist.")
+
+    def test_print_allocations_pipes_to_file(self):
+        person = 'Paul'
+        self.amity.create_room('Hogwarts~l')
+        self.amity.add_person(person, 'fellow', wants_accommodation=True)
+        self.amity.print_allocations(filename="test_amity")
+        repr_in_file = 'Hogwarts' + '\n' + ('-' * 37) +\
+            '\n' + 'Paul' + '\n'
+
+        directory = "allocations/"
+        f = open(directory + 'test_amity.txt', 'r')
+        data = f.read()
+        f.close()
+
+        self.assertEqual(data, repr_in_file)
+
+    def test_print_allocations_wrong_filename_chars(self):
+        status = self.amity.print_allocations(filename="/bad|*name@")
 
 if __name__ == '__main__':
     unittest.main()
