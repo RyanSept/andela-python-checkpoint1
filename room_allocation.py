@@ -220,8 +220,15 @@ class Amity(object):
             return True
 
     def print_unallocated(self, filename=None):
+        '''
+        Print list of people not in a room
+        '''
         if len(self.unallocated_people) > 0:
             return "No unallocated people exist."
+
+        all_data = '\n'.join(self.unallocated_people.keys())
+        print(all_data)  
+
         directory = "test_files/"
         if filename and self.is_valid_filename(filename):
             f = open(directory + filename + '.txt', "w")

@@ -198,7 +198,6 @@ class Test_Room_Allocation(TestCase):
     def test_loads_state(self):
         self.amity.load_state('databases/test_load.db')
         hogwarts = self.amity.get_room_by_name('Camelot').people_in_room
-        self.amity.print_allocations()
         self.assertIn('John Doe', hogwarts)
 
 
