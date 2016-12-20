@@ -1,11 +1,13 @@
 import random
-#from models import ModelRoom, ModelPerson, session
+import os
+from models import ModelRoom, ModelPerson, Base, create_engine, connect_db
 
 
 class Amity(object):
     def __init__(self):
         self.rooms = {}  # {'room_name':<obj: Room>}
         self.all_people = {}  # {'person_name':<obj: Person>}
+        self.unallocated_people = {}
 
     def create_room(self, *args):
         ''' Creates a room in Amity
@@ -80,12 +82,17 @@ class Amity(object):
                 habitable_rooms.append(room)
 
         try:
-            room = random.choice(habitable_rooms)
-            room.people_in_room[person.name] = person
-            return person
+            if habitable_rooms:
+                room = random.choice(habitable_rooms)
+                room.people_in_room[person.name] = person
+                return person
+            else:
+                self.unallocated_people[person_name] = person
+                return "No room to add person to."
         except IndexError as error:
             message = ' (No room to add %s to.)' % (type(person).__name__)
-            raise type(error)  # (error.message + message)
+            # raise type(error)  (error.message + message)
+            return "No room to add person to."
 
     def can_be_in_room(self, person, room):
         if person in room.people_in_room.values() or room.is_full():
@@ -131,8 +138,45 @@ class Amity(object):
         if self.can_be_in_room(person, new_room):
             current_room.people_in_room.pop(person_name)
             new_room.people_in_room[person_name] = person
+            if person_name in self.unallocated_people:
+                self.unallocated_people.pop(person_name)
         else:
             return "Person cannot be in room."
+
+    def load_people(self, filedir):
+        '''
+        Loads people into amity from file
+        args:
+            filedir - directory of file to load people from
+        '''
+        if not os.path.exists(filedir):
+            return "Invalid file path."
+
+        f = open(filedir, "r")
+        data = f.read().upper()
+        f.close()
+        if len(data) < 1:
+            return "File is empty."
+
+        data = data.split('\n')
+
+        for person_data in data:
+            person_data = person_data.split(' ')
+            person_name = person_data[0] + ' ' + person_data[1]
+            print(person_data[-1])
+            if 'FELLOW' in person_data:
+                switch = {'Y': True, 'N': False}
+                try:
+                    wants_accommodation = switch[person_data[3]]
+                except KeyError:
+                    return "File data was written in the wrong format."
+
+                person = self.add_person(
+                    person_name, 'fellow',
+                    wants_accommodation=wants_accommodation)
+
+            elif 'STAFF' in person_data:
+                person = self.add_person(person_name, 'staff')
 
     def print_allocations(self, filename=None):
         '''
@@ -140,7 +184,7 @@ class Amity(object):
         this can be piped into a file if specified in the filename parameter.
         Overwrites if piping.
         '''
-        if len(self.rooms)<1:
+        if len(self.rooms) < 1:
             return "No rooms exist."
         all_data = ''''''
         separator = '-' * 37
@@ -150,11 +194,13 @@ class Amity(object):
                 '\n' + people_in_room + '\n'
 
         print(all_data)
-        directory = "allocations/"
-        if filename:
+        directory = "test_files/"
+        if filename and self.is_valid_filename(filename):
             f = open(directory + filename + '.txt', "w")
             f.write(all_data)
             f.close()
+        else:
+            return "Invalid filename."
 
     def print_room(self, room_name):
         '''
@@ -167,11 +213,70 @@ class Amity(object):
         for name in people.keys():
             print(name)
 
-    def is_valid_pathname(self, filename):
-        for char in filename: 
-            if char not in "\/:*?<>|":
-                return True
-            return False
+    def is_valid_filename(self, filename):
+        for char in filename:
+            if char in "\/:*?<>|":
+                return False
+            return True
+
+    def print_unallocated(self, filename=None):
+        if len(self.unallocated_people) > 0:
+            return "No unallocated people exist."
+        directory = "test_files/"
+        if filename and self.is_valid_filename(filename):
+            f = open(directory + filename + '.txt', "w")
+            f.write(all_data)
+            f.close()
+        else:
+            return "Invalid filename."
+
+    def save_state(self, db='amity'):
+        '''
+        Persists the data of the app in database and stores it in the 
+        /databases folder
+        args:
+            db - sqlite database to save to (name to give databases)
+
+        '''
+
+        all_rows = []  # both people and room rows
+        for room_obj in self.rooms.values():
+            row = room_obj.to_db_row()
+            row.people_in_room = room_obj.people_in_room_to_rows()
+            all_rows.append(row)
+            all_rows += row.people_in_room
+
+        directory = "databases/"
+        filepath = directory + db + '.db'
+        if self.is_valid_filename(db):
+            with open(filepath, 'wb') as f:
+                pass
+            db = connect_db(filepath)
+            db.add_all(all_rows)
+            db.commit()
+
+    def load_state(self, dbpath):
+        if not os.path.exists(dbpath):
+            return "Invalid file path."
+
+        db = connect_db(dbpath)
+        rooms = db.query(ModelRoom).all()
+        people = db.query(ModelPerson).all()
+
+        for room in rooms:
+            if not room.name in self.rooms:
+                self.rooms[room.name] = room.to_obj()
+                people_in_room = room.people_in_room_to_objs()
+                self.rooms[room.name].people_in_room = people_in_room
+            else:
+                return "Room already exists."
+
+        for person in people:
+            if not person.name in self.all_people:
+                self.all_people[person.name] = person.to_obj()
+
+            if not person.room_id > 0:
+                self.unallocated_people[person.name] = person.to_obj()
 
 
 class Room(object):
@@ -190,6 +295,19 @@ class Room(object):
 
     def __repr__(self):
         return "<Room (name='%s')>" % (self.name)
+
+    def to_db_row(self):
+        room_type = type(self).__name__
+        map_ = {'LivingSpace': 'l', 'Office': 'o'}
+        row = ModelRoom(name=self.name, room_type=map_[room_type])
+        return row
+
+    def people_in_room_to_rows(self):
+        people = []
+        for person in self.people_in_room.values():
+            people.append(person.to_db_row())
+
+        return people
 
 
 class Office(Room):
@@ -213,6 +331,12 @@ class Person(object):
 
     def __repr__(self):
         return "<Person (name='%s')>" % (self.name)
+
+    def to_db_row(self):
+        person_type = type(self).__name__
+        map_ = {'Fellow': 'f', 'Staff': 's'}
+        row = ModelPerson(name=self.name, person_type=map_[person_type])
+        return row
 
 
 class Fellow(Person):

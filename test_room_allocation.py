@@ -1,7 +1,9 @@
 import unittest
 from unittest import TestCase
 from unittest.mock import mock_open, patch
-from room_allocation import Amity, Room, LivingSpace, Office, Person, Fellow, Staff
+from room_allocation import Amity, Room, LivingSpace,\
+    Office, Person, Fellow, Staff
+import sqlite3
 
 
 class Test_Room_Allocation(TestCase):
@@ -60,8 +62,8 @@ class Test_Room_Allocation(TestCase):
     def test_add_person_when_no_room_exists(self):
         '''Test add_person when no room they can stay in or no rooms at all'''
         person_name = "Dude"
-        with self.assertRaises(IndexError):
-            person = self.amity.add_person(person_name, 'fellow')
+        result = self.amity.add_person(person_name, 'fellow')
+        self.assertEqual(result, "No room to add person to.")
 
     def test_wrong_add_person_type_param(self):
         person_name = 'Guy'
@@ -121,6 +123,9 @@ class Test_Room_Allocation(TestCase):
         status = self.amity.reallocate_person("Potter", "Non_Existent_Room")
         self.assertEqual(status, "Room does not exist.")
 
+    def test_reallocate_removes_from_unallocated(self):
+        pass
+
     def test_print_room_nonexistent_room_name(self):
         status = self.amity.print_room("NonExistentRoom")
         self.assertEqual(status, "Room does not exist.")
@@ -137,15 +142,65 @@ class Test_Room_Allocation(TestCase):
         repr_in_file = 'Hogwarts' + '\n' + ('-' * 37) +\
             '\n' + 'Paul' + '\n'
 
-        directory = "allocations/"
+        directory = "test_files/"
         f = open(directory + 'test_amity.txt', 'r')
         data = f.read()
         f.close()
 
         self.assertEqual(data, repr_in_file)
 
-    def test_print_allocations_wrong_filename_chars(self):
-        status = self.amity.print_allocations(filename="/bad|*name@")
+    def test_print_allocations_illegal_filename_chars(self):
+        self.amity.create_room('Hogwarts~l')
+        status = self.amity.print_allocations(filename="/<>bad|*name@")
+        self.assertEqual(status, "Invalid filename.")
+
+    def test_persists_to_specified_db(self):
+        pass
+
+    def test_loads_people(self):
+        self.amity.create_room('Hogwarts~l')
+        self.amity.load_people('test_files/test_load.txt')
+
+        hogwarts = self.amity.get_room_by_name('Hogwarts').people_in_room
+
+        self.assertIn('FOHN DOE', hogwarts)
+
+    def test_load_people_empty_file(self):
+        status = self.amity.load_people('test_files/empty_file.txt')
+        self.assertEqual(status, "File is empty.")
+
+    def test_load_people_wrong_format(self):
+        filepath = 'test_files/wrong_format.txt'
+        with open(filepath,'w') as f:
+            f.write('Y JOHN DOE FELLOW')
+
+        status = self.amity.load_people(filepath)
+        self.assertEqual(status, "File data was written in the wrong format.")
+
+    def test_load_people_invalid_filedir(self):
+        status = self.amity.load_people('nonexistentdir/randomfilename.txt')
+        self.assertEqual(status, "Invalid file path.")
+
+    def test_saves_state(self):
+        person = 'Jude Law'
+        self.amity.create_room('Hogwarts~l')
+        self.amity.add_person(person, 'fellow', wants_accommodation=True)
+
+        self.amity.save_state(db='test')
+
+        conn = sqlite3.connect('databases/test.db')
+        database = conn.cursor()
+        result = database.execute("SELECT * FROM rooms WHERE name='Hogwarts'")
+        result = result.fetchall()[0][1]  # name
+
+        self.assertEqual(result, 'Hogwarts')
+
+    def test_loads_state(self):
+        self.amity.load_state('databases/test_load.db')
+        hogwarts = self.amity.get_room_by_name('Camelot').people_in_room
+        self.amity.print_allocations()
+        self.assertIn('John Doe', hogwarts)
+
 
 if __name__ == '__main__':
     unittest.main()
