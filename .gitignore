@@ -1,0 +1,7 @@
+htmlcov
+old
+.coverage
+.DS_Store
+__pycache__
+checkpoint1.sublime-project
+checkpoint1.sublime-workspace
