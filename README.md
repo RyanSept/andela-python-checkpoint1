@@ -1,1 +1,0 @@
-# andela-python-checkpoint1
