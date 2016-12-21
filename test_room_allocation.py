@@ -178,7 +178,7 @@ class Test_Room_Allocation(TestCase):
         status = self.amity.load_people(filepath)
         self.assertEqual(status, "File data was written in the wrong format.")
 
-    def test_load_people_invalid_filedir(self):
+    def test_load_people_invalid_filepath(self):
         status = self.amity.load_people('nonexistentdir/randomfilename.txt')
         self.assertEqual(status, "Invalid file path.")
 

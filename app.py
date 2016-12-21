@@ -1,14 +1,14 @@
 """
     Commands:
-        amity create_room <room_name>...
-        amity add_person <first_name> <second_name> <fellow|staff> [--wants_accomm=N]
-        amity reallocate_person <first_name> <second_name> <room_name>
-        amity load_people <filedir>
-        amity print_allocations [--o=filename]
-        amity print_unallocated [--o=filename]
-        amity print_room <room_name>
-        amity save_state [--db=sqlite_db]
-        amity load_state <sqlite_db>
+        create_room <room_name>...
+        add_person <first_name> <second_name> <fellow|staff> [--wants_accomm=N]
+        reallocate_person <first_name> <second_name> <room_name>
+        load_people <filedir>
+        print_allocations [--o=filename]
+        print_unallocated [--o=filename]
+        print_room <room_name>
+        save_state [--db=sqlite_db]
+        load_state <dbpath>
         quit
     Options:
         -h, --help  Show this screen and exit
@@ -51,6 +51,7 @@ def intro():
 
 
 class App(cmd.Cmd):
+    prompt = '<Amity>: '
     amity = Amity()
 
     @docopt_cmd
@@ -83,6 +84,8 @@ class App(cmd.Cmd):
         person_type = arg['<person_type>']
         map_ = {'Y': True, 'N': False}
         try:
+            if arg['--wants_accomm'] is None:
+                arg['--wants_accomm'] = 'N'
             wants_accommodation = map_[arg['--wants_accomm'].upper()]
         except KeyError:
             print("Invalid option: " + arg['--wants_accomm'])
@@ -101,6 +104,8 @@ class App(cmd.Cmd):
     def do_reallocate_person(self, arg):
         '''
         Usage: reallocate_person <first_name> <second_name> <room_name>
+
+        Move person from the current room to a specified room
         '''
 
         room_name = arg['<room_name>']
@@ -112,13 +117,92 @@ class App(cmd.Cmd):
     @docopt_cmd
     def do_load_people(self, arg):
         '''
-        Usage: load_people <filedir>
-            filedir - directory of file to load people from
+        Usage: load_people <filepath>
+
+        Loads people into amity from file
         '''
-        filedir = arg["<filedir>"]
-        print(filedir)
-        status = self.amity.load_people(filedir)
+        filepath = arg["<filepath>"]
+        status = self.amity.load_people(filepath)
         print(status)
+
+    @docopt_cmd
+    def do_print_allocations(self, arg):
+        '''
+        Usage: print_allocations [--o=filename]
+
+        Prints out each room's name and the people in it;
+        this can be piped into a file if specified in the filename parameter.
+        Each file is saved in the directory ___
+        '''
+        filename = arg['--o']
+
+        if filename != None:
+            status = self.amity.print_allocations(filename=filename)
+        else:
+            status = self.amity.print_allocations()
+        print(status)
+
+    @docopt_cmd
+    def do_print_unallocated(self, arg):
+        '''
+        Usage: print_unallocated [--o=filename]
+
+        Print list of people not in a room
+        '''
+        filename = arg['--o']
+
+        if filename != None:
+            status = self.amity.print_unallocated(filename=filename)
+        else:
+            status = self.amity.print_unallocated()
+
+        print(status)
+
+    @docopt_cmd
+    def do_print_room(self, arg):
+        '''
+        Usage: print_room <room_name>
+
+        Print occupants of a room
+        '''
+
+        room_name = arg['<room_name>']
+        status = self.amity.print_room(room_name)
+        if not type(status) is str:
+            for name in status:
+                print(name)
+            return
+        print(status)
+
+    @docopt_cmd
+    def do_save_state(self, arg):
+        '''
+        Usage: save_state [--db=sqlite_db]
+
+        Persists the data of the app in database and stores it in the
+        /databases folder
+        '''
+        db = arg['--db']
+
+        if db is not None:
+            status = self.amity.save_state(db=db)
+        else:
+            status = self.amity.save_state()
+
+        print(status)
+
+    @docopt_cmd
+    def do_load_state(self, arg):
+        '''
+        Usage: load_state <dbpath>
+
+        Loads data from a database into Amity.
+        '''
+
+        dbpath = arg['<dbpath>']
+        status = self.amity.load_state(dbpath)
+        print(status)
+
 
 if __name__ == "__main__":
     App().cmdloop()

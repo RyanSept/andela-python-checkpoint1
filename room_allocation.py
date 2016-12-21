@@ -60,7 +60,7 @@ class Amity(object):
         return "Room(s) created successfully."
 
     def room_exists(self, room_name):
-        if room_name in self.rooms:
+        if room_name in self.rooms.keys():
             return True
         else:
             return False
@@ -140,28 +140,32 @@ class Amity(object):
             return "Room does not exist."
 
         current_room = self.get_person_room(person_name)
-        person = current_room.people_in_room[person_name]
+        person = self.all_people[person_name]
         new_room = self.rooms[room_name]
 
-        if self.can_be_in_room(person, new_room):
+        if self.can_be_in_room(person, new_room) and current_room:
             current_room.people_in_room.pop(person_name)
             new_room.people_in_room[person_name] = person
             if person_name in self.unallocated_people:
                 self.unallocated_people.pop(person_name)
-            return "Moved person fron %s to %s" %(current_room.name, new_room.name)
+            return "Moved person from %s to %s." % (current_room.name, new_room.name)
+        elif not current_room:  # person is in unallocated
+            new_room.people_in_room[person_name] = person
+            self.unallocated_people.pop(person_name)
+            return "Moved person to room %s." % (new_room.name)
         else:
             return "Person cannot be in room."
 
-    def load_people(self, filedir):
+    def load_people(self, filepath):
         '''
         Loads people into amity from file
         args:
-            filedir - directory of file to load people from
+            filepath - directory of file to load people from
         '''
-        if not os.path.exists(filedir):
+        if not os.path.isfile(filepath):
             return "Invalid file path."
 
-        f = open(filedir, "r")
+        f = open(filepath, "r")
         data = f.read().upper()
         f.close()
         if len(data) < 1:
@@ -172,7 +176,7 @@ class Amity(object):
         for person_data in data:
             person_data = person_data.split(' ')
             person_name = person_data[0] + ' ' + person_data[1]
-            print(person_data[-1])
+
             if 'FELLOW' in person_data:
                 switch = {'Y': True, 'N': False}
                 try:
@@ -186,6 +190,8 @@ class Amity(object):
 
             elif 'STAFF' in person_data:
                 person = self.add_person(person_name, 'staff')
+
+        return "Load was successful."
 
     def print_allocations(self, filename=None):
         '''
@@ -202,12 +208,17 @@ class Amity(object):
             all_data += room.name + '\n' + separator +\
                 '\n' + people_in_room + '\n'
 
-        print(all_data)
+        if filename is None:
+            return all_data
+
         directory = "test_files/"
-        if filename and self.is_valid_filename(filename):
-            f = open(directory + filename + '.txt', "w")
+        filepath = directory + filename + '.txt'
+        if self.is_valid_filename(filename):
+            print(self.is_valid_filename(filename))
+            f = open(filepath, "w")
             f.write(all_data)
             f.close()
+            return "Wrote to " + filepath + " successfully."
         else:
             return "Invalid filename."
 
@@ -219,30 +230,35 @@ class Amity(object):
             return "Room does not exist."
         people = self.get_room_by_name(room_name).people_in_room
 
-        for name in people.keys():
-            print(name)
+        if len(people.keys()) > 0:
+            return people.keys()
+        return "No people in %s." % (room_name)
 
     def is_valid_filename(self, filename):
         for char in filename:
             if char in "\/:*?<>|":
                 return False
-            return True
+        return True
 
     def print_unallocated(self, filename=None):
         '''
         Print list of people not in a room
         '''
-        if len(self.unallocated_people) > 0:
+        if len(self.unallocated_people) < 1:
             return "No unallocated people exist."
 
         all_data = '\n'.join(self.unallocated_people.keys())
-        print(all_data)
+
+        if filename is None:
+            return all_data
 
         directory = "test_files/"
+        filepath = directory + filename + '.txt'
         if filename and self.is_valid_filename(filename):
-            f = open(directory + filename + '.txt', "w")
+            f = open(filepath, "w")
             f.write(all_data)
             f.close()
+            return "Wrote to " + filepath + " successfully."
         else:
             return "Invalid filename."
 
@@ -262,6 +278,10 @@ class Amity(object):
             all_rows.append(row)
             all_rows += row.people_in_room
 
+        for person_obj in self.unallocated_people.values():
+            row = person_obj.to_db_row()
+            all_rows.append(row)
+
         directory = "databases/"
         filepath = directory + db + '.db'
         if self.is_valid_filename(db):
@@ -270,8 +290,14 @@ class Amity(object):
             db = connect_db(filepath)
             db.add_all(all_rows)
             db.commit()
+            return "Data was successfuly saved to " + filepath
 
     def load_state(self, dbpath):
+        '''
+        Loads data from a database into Amity.
+        args:
+            dbpath - sqlite database to load from
+        '''
         if not os.path.exists(dbpath):
             return "Invalid file path."
 
@@ -291,8 +317,10 @@ class Amity(object):
             if not person.name in self.all_people:
                 self.all_people[person.name] = person.to_obj()
 
-            if not person.room_id > 0:
+            if not person.room_id:
                 self.unallocated_people[person.name] = person.to_obj()
+
+        return "Load successful!"
 
 
 class Room(object):
@@ -310,7 +338,7 @@ class Room(object):
         return False
 
     def __repr__(self):
-        return "<Room (name='%s')>" % (self.name)
+        return "<%s (name='%s')>" % (type(self).__name__, self.name)
 
     def to_db_row(self):
         room_type = type(self).__name__
