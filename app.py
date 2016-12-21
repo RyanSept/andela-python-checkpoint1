@@ -139,7 +139,7 @@ class App(cmd.Cmd):
 
         Prints out each room's name and the people in it;
         this can be piped into a file if specified in the filename parameter.
-        Each file is saved in the directory ___
+        Each file is saved in the directory textfiles.
         '''
         filename = arg['--o']
 
