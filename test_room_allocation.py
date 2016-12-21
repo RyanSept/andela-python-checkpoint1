@@ -41,8 +41,8 @@ class Test_Room_Allocation(TestCase):
         self.assertLess(occurence_count, 2)
 
     def test_none_string_room_name(self):
-        with self.assertRaises(TypeError):
-            self.amity.create_room(9)
+        status = self.amity.create_room(9)
+        self.assertEqual(status, "Room name is not a string.")
 
     def test_can_add_person_to_system(self):
         person_name = 'Ryan'
@@ -68,8 +68,9 @@ class Test_Room_Allocation(TestCase):
     def test_wrong_add_person_type_param(self):
         person_name = 'Guy'
         self.amity.create_room('Camelot~o')
-        with self.assertRaises(TypeError):
-            self.amity.add_person(person_name, 'pikachu')
+        status = self.amity.add_person(person_name, 'pikachu')
+
+        self.assertEqual(status, "Invalid person type.")
 
     def test_doesnt_add_staff_to_livingspace(self):
         person_name = 'John Doe'

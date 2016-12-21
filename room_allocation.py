@@ -28,16 +28,22 @@ class Amity(object):
         for room_name in room_names:
             # validation of input
             if type(room_name) is not str:
-                raise TypeError
+                return "Room name is not a string."
 
             room_name_split = room_name.split('~')
             if len(room_name_split) != 2:
-                raise ValueError
+                return '''
+                Invalid argument(s).\n
+                Hint: Append ~l|~o to the room name. e.g Hogwarts~l
+                '''
 
             room_name = room_name_split[0]
             room_type = room_name_split[1]
             if room_type not in ['l', 'o']:
-                raise TypeError
+                return '''
+                Invalid argument.\n
+                Hint: Append either ~l for livingspace or ~o for office.
+                '''
 
             if self.room_exists(room_name):
                 # print "Room '%s' already exists." % (room_name)
@@ -51,6 +57,7 @@ class Amity(object):
 
             self.rooms[room_name] = room  # add room object to amity
             counter += 1
+        return "Room(s) created successfully."
 
     def room_exists(self, room_name):
         if room_name in self.rooms:
@@ -60,14 +67,14 @@ class Amity(object):
 
     def add_person(self, person_name, typ, wants_accommodation=False):
         '''
-        Creates person and puts them into room randomly. #isinstance
+        Creates person and puts them into room randomly.
         args:
             person_name - name of person
             wants_accommodation - boolean
             typ - "fellow" or "staff"
         '''
         if typ not in ['fellow', 'staff']:
-            raise TypeError
+            return "Invalid person type."
 
         if typ == 'fellow':
             person = Fellow(person_name)
@@ -90,6 +97,7 @@ class Amity(object):
                 self.unallocated_people[person_name] = person
                 return "No room to add person to."
         except IndexError as error:
+            self.unallocated_people[person_name] = person
             message = ' (No room to add %s to.)' % (type(person).__name__)
             # raise type(error)  (error.message + message)
             return "No room to add person to."
@@ -140,6 +148,7 @@ class Amity(object):
             new_room.people_in_room[person_name] = person
             if person_name in self.unallocated_people:
                 self.unallocated_people.pop(person_name)
+            return "Moved person fron %s to %s" %(current_room.name, new_room.name)
         else:
             return "Person cannot be in room."
 
@@ -227,7 +236,7 @@ class Amity(object):
             return "No unallocated people exist."
 
         all_data = '\n'.join(self.unallocated_people.keys())
-        print(all_data)  
+        print(all_data)
 
         directory = "test_files/"
         if filename and self.is_valid_filename(filename):
