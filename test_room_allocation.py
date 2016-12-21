@@ -63,7 +63,7 @@ class Test_Room_Allocation(TestCase):
         '''Test add_person when no room they can stay in or no rooms at all'''
         person_name = "Dude"
         result = self.amity.add_person(person_name, 'fellow')
-        self.assertEqual(result, "No room to add person to.")
+        self.assertEqual(result, "Added person but there was no room to add person to.")
 
     def test_wrong_add_person_type_param(self):
         person_name = 'Guy'
@@ -107,11 +107,11 @@ class Test_Room_Allocation(TestCase):
         self.amity.add_person("Lancelot", 'staff')
 
         status = self.amity.reallocate_person("Lancelot", 'Hogwarts')
-        self.assertEqual(status, "Person cannot be in room.")
+        self.assertTrue("cannot be in" in status)
 
         self.amity.add_person("Arthur", 'fellow')  # doesn't want accommodation
         status2 = self.amity.reallocate_person("Arthur", 'Hogwarts')
-        self.assertEqual(status2, "Person cannot be in room.")
+        self.assertTrue("cannot be in" in status2)
 
     def test_cannot_reallocate_non_existent_person(self):
         self.amity.create_room('Hogwarts~l')

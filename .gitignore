@@ -5,3 +5,4 @@ old
 __pycache__
 checkpoint1.sublime-project
 checkpoint1.sublime-workspace
+*.pyc

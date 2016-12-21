@@ -1,4 +1,5 @@
 """
+    Welcome to Amity Room Allocation!
     Commands:
         create_room <room_name>...
         add_person <first_name> <second_name> <fellow|staff> [--wants_accomm=N]
@@ -9,6 +10,7 @@
         print_room <room_name>
         save_state [--db=sqlite_db]
         load_state <dbpath>
+        help
         quit
     Options:
         -h, --help  Show this screen and exit
@@ -47,7 +49,12 @@ def docopt_cmd(func):
 
 
 def intro():
-    pass
+    with open('design/amity_logo.txt', 'r') as f:
+        logo = f.read()
+
+    cprint(figlet_format('\tAMITY', font='slscript'), 'cyan')
+    print(logo)
+    cprint(__doc__, 'magenta')
 
 
 class App(cmd.Cmd):
@@ -69,14 +76,14 @@ class App(cmd.Cmd):
         room_names = arg['<room_name>']
 
         status = self.amity.create_room(*room_names)
-        print(status)
+        cprint(status, 'cyan')
 
     @docopt_cmd
     def do_add_person(self, arg):
         '''
         Usage: add_person <first_name> <second_name> <person_type> [--wants_accomm=N]
 
-        Creates person and puts them into room randomly. 
+        Creates person and puts them into room randomly.
             person_type - fellow|staff
         '''
 
@@ -95,10 +102,10 @@ class App(cmd.Cmd):
                                        wants_accommodation=wants_accommodation)
 
         if type(status) != str:
-            print('Person added successfully!')
+            cprint('Person added successfully!', 'green')
 
         else:
-            print(status)
+            cprint(status, 'cyan')
 
     @docopt_cmd
     def do_reallocate_person(self, arg):
@@ -112,7 +119,7 @@ class App(cmd.Cmd):
         person_name = arg['<first_name>'] + ' ' + arg['<second_name>']
 
         status = self.amity.reallocate_person(person_name, room_name)
-        print(status)
+        cprint(status, 'cyan')
 
     @docopt_cmd
     def do_load_people(self, arg):
@@ -123,7 +130,7 @@ class App(cmd.Cmd):
         '''
         filepath = arg["<filepath>"]
         status = self.amity.load_people(filepath)
-        print(status)
+        cprint(status, 'cyan')
 
     @docopt_cmd
     def do_print_allocations(self, arg):
@@ -140,7 +147,7 @@ class App(cmd.Cmd):
             status = self.amity.print_allocations(filename=filename)
         else:
             status = self.amity.print_allocations()
-        print(status)
+        cprint(status, 'cyan')
 
     @docopt_cmd
     def do_print_unallocated(self, arg):
@@ -156,7 +163,7 @@ class App(cmd.Cmd):
         else:
             status = self.amity.print_unallocated()
 
-        print(status)
+        cprint(status, 'cyan')
 
     @docopt_cmd
     def do_print_room(self, arg):
@@ -172,7 +179,7 @@ class App(cmd.Cmd):
             for name in status:
                 print(name)
             return
-        print(status)
+        cprint(status, 'cyan')
 
     @docopt_cmd
     def do_save_state(self, arg):
@@ -189,7 +196,7 @@ class App(cmd.Cmd):
         else:
             status = self.amity.save_state()
 
-        print(status)
+        cprint(status, 'cyan')
 
     @docopt_cmd
     def do_load_state(self, arg):
@@ -201,8 +208,26 @@ class App(cmd.Cmd):
 
         dbpath = arg['<dbpath>']
         status = self.amity.load_state(dbpath)
-        print(status)
+        cprint(status, 'cyan')
 
+    @docopt_cmd
+    def do_quit(self, arg):
+        '''
+        Usage: quit
+        '''
+        cprint('Leaving Amity Room Allocation. Have a nice day', 'yellow')
+        exit()
+
+    @docopt_cmd
+    def do_help(self, arg):
+        '''
+        Usage: quit
+        '''
+        cprint(__doc__, 'magenta')
 
 if __name__ == "__main__":
-    App().cmdloop()
+    try:
+        intro()
+        App().cmdloop()
+    except KeyboardInterrupt:
+        cprint('Leaving Amity Room Allocation. Have a nice day!', 'yellow')

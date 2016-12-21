@@ -5,8 +5,8 @@ from models import ModelRoom, ModelPerson, Base, create_engine, connect_db
 
 class Amity(object):
     def __init__(self):
-        self.rooms = {}  # {'room_name':<obj: Room>}
-        self.all_people = {}  # {'person_name':<obj: Person>}
+        self.rooms = {}  # key is room_name value is obj
+        self.all_people = {}  # key is person_name value is obj
         self.unallocated_people = {}
 
     def create_room(self, *args):
@@ -46,7 +46,7 @@ class Amity(object):
                 '''
 
             if self.room_exists(room_name):
-                # print "Room '%s' already exists." % (room_name)
+                print("Room '%s' already exists." % (room_name))
                 continue
             # input validation ends here
 
@@ -95,12 +95,10 @@ class Amity(object):
                 return person
             else:
                 self.unallocated_people[person_name] = person
-                return "No room to add person to."
-        except IndexError as error:
+                return "Added person but there was no room to add person to."
+        except IndexError:
             self.unallocated_people[person_name] = person
-            message = ' (No room to add %s to.)' % (type(person).__name__)
-            # raise type(error)  (error.message + message)
-            return "No room to add person to."
+            return "Added person but there was no room to add person to."
 
     def can_be_in_room(self, person, room):
         if person in room.people_in_room.values() or room.is_full():
@@ -148,13 +146,13 @@ class Amity(object):
             new_room.people_in_room[person_name] = person
             if person_name in self.unallocated_people:
                 self.unallocated_people.pop(person_name)
-            return "Moved person from %s to %s." % (current_room.name, new_room.name)
+            return "Moved %s from %s to %s." % (person_name, current_room.name, new_room.name)
         elif not current_room:  # person is in unallocated
             new_room.people_in_room[person_name] = person
             self.unallocated_people.pop(person_name)
             return "Moved person to room %s." % (new_room.name)
         else:
-            return "Person cannot be in room."
+            return "%s cannot be in %s." % (type(person).__name__, type(new_room).__name__)
 
     def load_people(self, filepath):
         '''
@@ -172,7 +170,6 @@ class Amity(object):
             return "File is empty."
 
         data = data.split('\n')
-
         for person_data in data:
             person_data = person_data.split(' ')
             person_name = person_data[0] + ' ' + person_data[1]
@@ -201,7 +198,7 @@ class Amity(object):
         '''
         if len(self.rooms) < 1:
             return "No rooms exist."
-        all_data = ''''''
+        all_data = ''''''  # string that we add each room and it's occupants to
         separator = '-' * 37
         for room in self.rooms.values():
             people_in_room = ', '.join(room.people_in_room.keys())
@@ -211,10 +208,9 @@ class Amity(object):
         if filename is None:
             return all_data
 
-        directory = "test_files/"
+        directory = "textfiles/"
         filepath = directory + filename + '.txt'
         if self.is_valid_filename(filename):
-            print(self.is_valid_filename(filename))
             f = open(filepath, "w")
             f.write(all_data)
             f.close()
