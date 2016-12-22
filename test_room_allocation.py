@@ -124,9 +124,6 @@ class Test_Room_Allocation(TestCase):
         status = self.amity.reallocate_person("Potter", "Non_Existent_Room")
         self.assertEqual(status, "Room does not exist.")
 
-    def test_reallocate_removes_from_unallocated(self):
-        pass
-
     def test_print_room_nonexistent_room_name(self):
         status = self.amity.print_room("NonExistentRoom")
         self.assertEqual(status, "Room does not exist.")
@@ -150,7 +147,7 @@ class Test_Room_Allocation(TestCase):
 
         self.assertEqual(data, repr_in_file)
 
-    def test_print_allocations_illegal_filename_chars(self):
+    def test_print_allocations_invalid_filename_chars(self):
         self.amity.create_room('Hogwarts~l')
         status = self.amity.print_allocations(filename="/<>bad|*name@")
         self.assertEqual(status, "Invalid filename.")

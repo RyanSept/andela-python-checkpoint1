@@ -108,8 +108,7 @@ class Amity(object):
                 return True
             if type(room) is LivingSpace and person.wants_accommodation:
                 return True
-            else:
-                return False
+            return False
         elif type(person) is Staff:
             if type(room) is LivingSpace:
                 return False
@@ -307,7 +306,7 @@ class Amity(object):
                 people_in_room = room.people_in_room_to_objs()
                 self.rooms[room.name].people_in_room = people_in_room
             else:
-                return "Room already exists."
+                continue
 
         for person in people:
             if not person.name in self.all_people:
@@ -329,7 +328,7 @@ class Room(object):
         self.max_capacity = None
 
     def is_full(self):
-        if len(self.people_in_room) >= self.max_capacity:
+        if len(self.people_in_room) == self.max_capacity:
             return True
         return False
 

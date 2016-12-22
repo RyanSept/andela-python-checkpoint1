@@ -42,7 +42,7 @@ Usage
     
 ##Installation and Setup
 1. Navigate to a directory of choice on terminal.
-2. Clone this repository on that directory.
-3. Navigate to the repo's folder on your computer
-4. Install the requirements in `requirements.txt` using pip
+2. Clone this repository on that directory using `git clone https://github.com/RyanSept/andela-python-checkpoint1.git`
+3. Navigate to the repo's folder on your computer terminal and do `git checkout develop`
+4. Install the requirements in `requirements.txt` using `pip install -r requirements.txt`
 5. Run the application with `python app.py`
