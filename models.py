@@ -1,9 +1,6 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.ext.serializer import loads, dumps
+from sqlalchemy import exists, create_engine, Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import sessionmaker, relationship, backref
 
 
 Base = declarative_base()
@@ -42,7 +39,7 @@ class ModelPerson(Base):
 
     __tablename__ = "person"
     id = Column(Integer, primary_key=True)
-    name = Column(String(255), unique=True)
+    name = Column(String(255))
     person_type = Column(String(1))
     wants_accomodation = Column(Boolean, default=False)
     room_id = Column(Integer, ForeignKey("rooms.id"))

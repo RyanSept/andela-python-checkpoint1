@@ -1,6 +1,6 @@
 import random
 import os
-from models import ModelRoom, ModelPerson, Base, create_engine, connect_db
+from models import ModelRoom, ModelPerson, Base, create_engine, connect_db, exists
 
 
 class Amity(object):
@@ -73,6 +73,8 @@ class Amity(object):
             wants_accommodation - boolean
             typ - "fellow" or "staff"
         '''
+        if person_name in self.all_people:
+            return "Person already exists."
         if typ not in ['fellow', 'staff']:
             return "Invalid person type."
 
@@ -88,15 +90,11 @@ class Amity(object):
             if self.can_be_in_room(person, room):
                 habitable_rooms.append(room)
 
-        try:
-            if habitable_rooms:
-                room = random.choice(habitable_rooms)
-                room.people_in_room[person.name] = person
-                return person
-            else:
-                self.unallocated_people[person_name] = person
-                return "Added person but there was no room to add person to."
-        except IndexError:
+        if habitable_rooms:
+            room = random.choice(habitable_rooms)
+            room.people_in_room[person.name] = person
+            return person
+        else:
             self.unallocated_people[person_name] = person
             return "Added person but there was no room to add person to."
 
@@ -119,10 +117,12 @@ class Amity(object):
         if self.room_exists(room_name):
             return self.rooms[room_name]
 
-    def get_person_room(self, person_name):
+    def get_person_rooms(self, person_name):
+        rooms = []
         for room in self.rooms.values():
             if person_name in room.people_in_room:
-                return room
+                rooms.append(room)
+        return rooms
 
     def reallocate_person(self, person_name, room_name):
         '''
@@ -136,22 +136,31 @@ class Amity(object):
         if room_name not in self.rooms:
             return "Room does not exist."
 
-        current_room = self.get_person_room(person_name)
+        current_rooms = self.get_person_rooms(person_name)
         person = self.all_people[person_name]
         new_room = self.rooms[room_name]
 
-        if self.can_be_in_room(person, new_room) and current_room:
-            current_room.people_in_room.pop(person_name)
-            new_room.people_in_room[person_name] = person
-            if person_name in self.unallocated_people:
+        if self.can_be_in_room(person, new_room):
+            if current_rooms:
+                for cur_room in current_rooms:
+                    if cur_room.typ == new_room.typ:
+                        print(cur_room.typ)
+                        cur_room.people_in_room.pop(person_name)
+                        new_room.people_in_room[person_name] = person
+                        if person_name in self.unallocated_people:
+                            self.unallocated_people.pop(person_name)
+                        return "Moved %s from %s to %s." % (person_name, cur_room.name, new_room.name)
+                    else:
+                        new_room.people_in_room[person_name] = person
+                        return "Moved %s to %s." % (person_name, new_room.name)
+
+            else:  # person is in unallocated
+                new_room.people_in_room[person_name] = person
                 self.unallocated_people.pop(person_name)
-            return "Moved %s from %s to %s." % (person_name, current_room.name, new_room.name)
-        elif not current_room:  # person is in unallocated
-            new_room.people_in_room[person_name] = person
-            self.unallocated_people.pop(person_name)
-            return "Moved person to room %s." % (new_room.name)
+                return "Moved person to room %s." % (new_room.name)
         else:
-            return "%s cannot be in %s." % (type(person).__name__, type(new_room).__name__)
+            reason = "Hint: They might not want accommodation or the room might be full."
+            return "%s cannot be in %s. %s" % (type(person).__name__, type(new_room).__name__, reason)
 
     def load_people(self, filepath):
         '''
@@ -283,8 +292,13 @@ class Amity(object):
             with open(filepath, 'wb') as f:
                 pass
             db = connect_db(filepath)
-            db.add_all(all_rows)
-            db.commit()
+
+            for row in all_rows:
+                try:
+                    db.add(row)
+                    db.commit()
+                except:
+                    pass
             return "Data was successfuly saved to " + filepath
 
     def load_state(self, dbpath):
@@ -326,6 +340,7 @@ class Room(object):
         self.name = name
         self.people_in_room = {}
         self.max_capacity = None
+        self.typ = type(self).__name__
 
     def is_full(self):
         if len(self.people_in_room) == self.max_capacity:

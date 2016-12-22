@@ -45,4 +45,4 @@ Usage
 2. Clone this repository on that directory using `git clone https://github.com/RyanSept/andela-python-checkpoint1.git`
 3. Navigate to the repo's folder on your computer terminal and do `git checkout develop`
 4. Install the requirements in `requirements.txt` using `pip install -r requirements.txt`
-5. Run the application with `python app.py`
+5. Run the application with `python3 app.py`
