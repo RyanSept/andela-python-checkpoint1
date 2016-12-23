@@ -91,8 +91,11 @@ class Amity(object):
                 habitable_rooms.append(room)
 
         if habitable_rooms:
-            room = random.choice(habitable_rooms)
-            room.people_in_room[person.name] = person
+            for room in habitable_rooms:
+                if type(room) is Office:
+                    room.people_in_room[person.name] = person
+                if type(room) is LivingSpace and type(person) is Fellow:
+                    room.people_in_room[person.name] = person
             return person
         else:
             self.unallocated_people[person_name] = person

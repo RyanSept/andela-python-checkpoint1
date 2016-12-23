@@ -90,7 +90,7 @@ class Test_Room_Allocation(TestCase):
             self.amity.reallocate_person(person, 'Camelot')
 
         camelot = self.amity.get_room_by_name('Camelot')
-        self.assertLess(len(camelot.people_in_room), 7)
+        self.assertEqual(len(camelot.people_in_room), 6)
 
     def test_cannot_add_more_than_4_people_to_livingspace(self):
         people = ['Paul', 'Ryan', 'Barney', 'Mark', 'Angie']
